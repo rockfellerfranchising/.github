@@ -1,0 +1,35 @@
+name: Bug report
+description: Reporte um bug
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+    - type: textarea
+      id: expected
+      attributes:
+          label: Comportamento esperado
+      validations:
+          required: true
+
+    - type: textarea
+      id: actual
+      attributes:
+          label: Comportamento atual
+      validations:
+          required: true
+
+    - type: textarea
+      id: reproduction
+      attributes:
+          label: Passos para a reprodução
+      validations:
+          required: true
+
+    - type: dropdown
+      id: jira
+      attributes:
+          label: Criar uma issue no Jira?
+          options:
+              - "Sim"
+              - "Não"
+      validations:
+          required: true

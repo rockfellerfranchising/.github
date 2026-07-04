@@ -1,0 +1,42 @@
+name: Feature request
+description: Solicite uma nova funcionalidade
+title: "[Feature]: "
+labels: ["feature", "triage"]
+body:
+    - type: textarea
+      id: problem
+      attributes:
+          label: Problema ou oportunidade
+      validations:
+          required: true
+
+    - type: textarea
+      id: proposal
+      attributes:
+          label: Solução proposta
+      validations:
+          required: true
+
+    - type: textarea
+      id: value
+      attributes:
+          label: Valor esperado
+      validations:
+          required: true
+
+    - type: textarea
+      id: notes
+      attributes:
+          label: Contexto adicional
+      validations:
+          required: false
+
+    - type: dropdown
+      id: jira
+      attributes:
+          label: Criar uma issue no Jira?
+          options:
+              - "Sim"
+              - "Não"
+      validations:
+          required: true

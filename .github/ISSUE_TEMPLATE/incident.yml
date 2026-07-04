@@ -1,0 +1,47 @@
+name: Incident
+description: Reporte um incidente
+title: "[Incident]: "
+labels: ["incident", "triage"]
+body:
+    - type: textarea
+      id: summary
+      attributes:
+          label: Resumo do incidente
+      validations:
+          required: true
+
+    - type: textarea
+      id: impact
+      attributes:
+          label: Impacto
+      validations:
+          required: true
+
+    - type: textarea
+      id: mitigation
+      attributes:
+          label: Mitigação atual ou necessária
+      validations:
+          required: true
+
+    - type: dropdown
+      id: severity
+      attributes:
+          label: Severidade
+          options:
+              - "Crítica"
+              - "Alta"
+              - "Média"
+              - "Baixa"
+      validations:
+          required: true
+
+    - type: dropdown
+      id: jira
+      attributes:
+          label: Criar uma issue no Jira?
+          options:
+              - "Sim"
+              - "Não"
+      validations:
+          required: true

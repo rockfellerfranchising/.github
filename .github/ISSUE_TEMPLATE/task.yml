@@ -1,0 +1,35 @@
+name: Task
+description: Registre uma tarefa
+title: "[Task]: "
+labels: ["task", "triage"]
+body:
+    - type: textarea
+      id: objective
+      attributes:
+          label: Objetivo
+      validations:
+          required: true
+
+    - type: textarea
+      id: scope
+      attributes:
+          label: Escopo
+      validations:
+          required: true
+
+    - type: textarea
+      id: done_criteria
+      attributes:
+          label: Critérios de conclusão
+      validations:
+          required: true
+
+    - type: dropdown
+      id: jira
+      attributes:
+          label: Criar uma issue no Jira?
+          options:
+              - "Sim"
+              - "Não"
+      validations:
+          required: true
