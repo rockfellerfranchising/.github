@@ -1,0 +1,19 @@
+{
+  "name": "Rock TypeScript Quality Gate",
+  "description": "PR governance + TypeScript quality checks for main, develop, staging and branch pushes.",
+  "iconName": "octicon shield-check",
+  "categories": [
+    "TypeScript",
+    "JavaScript",
+    "Continuous integration"
+  ],
+  "filePatterns": [
+    "package.json$",
+    "bun.lock$",
+    "bun.lockb$",
+    "pnpm-lock.yaml$",
+    "package-lock.json$",
+    "yarn.lock$",
+    "tsconfig.*json$"
+  ]
+}

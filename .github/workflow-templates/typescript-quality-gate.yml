@@ -1,0 +1,58 @@
+name: TypeScript Quality Gate
+
+on:
+    pull_request:
+        branches:
+            - main
+            - develop
+            - staging
+    push:
+        branches:
+            - main
+            - develop
+            - staging
+            - "feature/**"
+            - "fix/**"
+            - "bugfix/**"
+            - "hotfix/**"
+            - "release/**"
+            - "chore/**"
+            - "refactor/**"
+            - "docs/**"
+            - "test/**"
+            - "ci/**"
+            - "build/**"
+            - "perf/**"
+            - "deps/**"
+            - "dependabot/**"
+            - "renovate/**"
+            - "sync/**"
+
+permissions:
+    contents: read
+    pull-requests: read
+
+concurrency:
+    group: quality-gate-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    governance:
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: rockfellerfranchising/.github/.github/workflows/reusable-pr-governance.yml@main
+        with:
+            require-main-source-branches: develop,staging
+            allowed-develop-sources: feature/,fix/,bugfix/,hotfix/,chore/,refactor/,docs/,release/,test/,ci/,build/,perf/,deps/,dependabot/,renovate/,sync/
+            allowed-staging-sources: develop,release/,hotfix/,fix/,bugfix/,sync/
+            validate-pr-body: true
+
+    quality:
+        uses: rockfellerfranchising/.github/.github/workflows/reusable-typescript-quality.yml@main
+        with:
+            node-version: "22"
+            bun-version: "1.1.26"
+            require-lint: true
+            require-typecheck: true
+            require-test: true
+            require-build: false
+            require-format-check: false

@@ -1,0 +1,183 @@
+name: Reusable PR Governance
+
+on:
+    workflow_call:
+        inputs:
+            organization-community-repo:
+                description: Repository that stores the org-wide PR template and spec.
+                required: false
+                default: .github
+                type: string
+            require-main-source-branches:
+                description: Comma-separated branches allowed to open PRs into main.
+                required: false
+                default: develop,staging
+                type: string
+            allowed-develop-sources:
+                description: Comma-separated exact branches or prefixes allowed into develop.
+                required: false
+                default: feature/,fix/,bugfix/,hotfix/,chore/,refactor/,docs/,release/,test/,ci/,build/,perf/,deps/,dependabot/,renovate/,sync/
+                type: string
+            allowed-staging-sources:
+                description: Comma-separated exact branches or prefixes allowed into staging.
+                required: false
+                default: develop,release/,hotfix/,fix/,bugfix/,sync/
+                type: string
+            validate-pr-body:
+                description: Validates that the PR body follows the organization template.
+                required: false
+                default: true
+                type: boolean
+
+permissions:
+    contents: read
+    pull-requests: read
+
+jobs:
+    governance:
+        name: PR Governance
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout org community files
+              if: ${{ inputs.validate-pr-body }}
+              uses: actions/checkout@v4
+              with:
+                  repository: ${{ github.repository_owner }}/${{ inputs.organization-community-repo }}
+                  path: org-community
+                  sparse-checkout-cone-mode: false
+                  sparse-checkout: |
+                      PULL_REQUEST_TEMPLATE.md
+                      .github/pr-template-spec.json
+
+            - name: Validate source branch policy and PR body
+              env:
+                  PR_BODY: ${{ github.event.pull_request.body || '' }}
+                  PR_TITLE: ${{ github.event.pull_request.title || '' }}
+                  PR_BASE_REF: ${{ github.base_ref }}
+                  PR_HEAD_REF: ${{ github.head_ref }}
+                  REQUIRE_MAIN_SOURCE_BRANCHES: ${{ inputs.require-main-source-branches }}
+                  ALLOWED_DEVELOP_SOURCES: ${{ inputs.allowed-develop-sources }}
+                  ALLOWED_STAGING_SOURCES: ${{ inputs.allowed-staging-sources }}
+                  VALIDATE_PR_BODY: ${{ inputs.validate-pr-body }}
+                  SPEC_PATH: org-community/.github/pr-template-spec.json
+                  TEMPLATE_PATH: org-community/PULL_REQUEST_TEMPLATE.md
+              run: |
+                  node <<'NODE'
+                  const fs = require("fs");
+
+                  const parsePatterns = (value) =>
+                    value
+                      .split(",")
+                      .map((item) => item.trim())
+                      .filter(Boolean);
+
+                  const matchesPattern = (branch, pattern) => {
+                    if (pattern.endsWith("/")) {
+                      return branch.startsWith(pattern);
+                    }
+
+                    if (pattern.includes("*")) {
+                      const escaped = pattern
+                        .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
+                        .replace(/\*/g, ".*");
+                      return new RegExp(`^${escaped}$`).test(branch);
+                    }
+
+                    return branch === pattern;
+                  };
+
+                  const fail = (message) => {
+                    console.error(message);
+                    process.exit(1);
+                  };
+
+                  const body = process.env.PR_BODY || "";
+                  const title = process.env.PR_TITLE || "";
+                  const baseRef = process.env.PR_BASE_REF || "";
+                  const headRef = process.env.PR_HEAD_REF || "";
+                  const validatePrBody = process.env.VALIDATE_PR_BODY === "true";
+
+                  if (!baseRef || !headRef) {
+                    fail("Este workflow deve rodar em eventos de pull_request.");
+                  }
+
+                  const mainSources = parsePatterns(process.env.REQUIRE_MAIN_SOURCE_BRANCHES || "develop,staging");
+                  const developSources = parsePatterns(process.env.ALLOWED_DEVELOP_SOURCES || "");
+                  const stagingSources = parsePatterns(process.env.ALLOWED_STAGING_SOURCES || "");
+
+                  const branchFailures = [];
+
+                  if (baseRef === "main" && !mainSources.some((pattern) => matchesPattern(headRef, pattern))) {
+                    branchFailures.push(
+                      `PRs para main devem vir apenas de: ${mainSources.join(", ")}. Branch recebida: ${headRef}.`
+                    );
+                  }
+
+                  if (baseRef === "develop" && !developSources.some((pattern) => matchesPattern(headRef, pattern))) {
+                    branchFailures.push(
+                      `PRs para develop devem vir apenas de branches compatíveis com: ${developSources.join(", ")}. Branch recebida: ${headRef}.`
+                    );
+                  }
+
+                  if (baseRef === "staging" && !stagingSources.some((pattern) => matchesPattern(headRef, pattern))) {
+                    branchFailures.push(
+                      `PRs para staging devem vir apenas de branches compatíveis com: ${stagingSources.join(", ")}. Branch recebida: ${headRef}.`
+                    );
+                  }
+
+                  if (branchFailures.length > 0) {
+                    fail(branchFailures.join("\n"));
+                  }
+
+                  if (!validatePrBody) {
+                    console.log("Validacao de corpo do PR desabilitada.");
+                    process.exit(0);
+                  }
+
+                  if (!fs.existsSync(process.env.SPEC_PATH)) {
+                    fail(`Spec do template de PR nao encontrada em ${process.env.SPEC_PATH}.`);
+                  }
+
+                  const spec = JSON.parse(fs.readFileSync(process.env.SPEC_PATH, "utf8"));
+                  const template = fs.existsSync(process.env.TEMPLATE_PATH)
+                    ? fs.readFileSync(process.env.TEMPLATE_PATH, "utf8")
+                    : "";
+
+                  const missingHeadings = (spec.requiredHeadings || []).filter((heading) => !body.includes(heading));
+                  const missingLines = (spec.requiredLines || []).filter((line) => !body.includes(line));
+                  const forbiddenPlaceholders = (spec.forbiddenPlaceholders || []).filter((line) => body.includes(line));
+
+                  const failures = [];
+
+                  if (!title.trim()) {
+                    failures.push("O titulo do PR nao pode estar vazio.");
+                  }
+
+                  if (!body.trim()) {
+                    failures.push("O corpo do PR nao pode estar vazio.");
+                  }
+
+                  if (missingHeadings.length > 0) {
+                    failures.push(`Secoes obrigatorias ausentes no corpo do PR: ${missingHeadings.join(", ")}.`);
+                  }
+
+                  if (missingLines.length > 0) {
+                    failures.push(`Linhas obrigatorias ausentes no corpo do PR: ${missingLines.join(", ")}.`);
+                  }
+
+                  if (forbiddenPlaceholders.length > 0) {
+                    failures.push(
+                      `O PR ainda contem textos-placeholder do template: ${forbiddenPlaceholders.join(" | ")}.`
+                    );
+                  }
+
+                  if (template && !template.includes("## Resumo")) {
+                    failures.push("O template central de PR nao parece conter a estrutura esperada.");
+                  }
+
+                  if (failures.length > 0) {
+                    fail(failures.join("\n"));
+                  }
+
+                  console.log(`Governanca do PR validada com sucesso para ${headRef} -> ${baseRef}.`);
+                  NODE

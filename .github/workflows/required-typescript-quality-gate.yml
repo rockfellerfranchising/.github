@@ -1,0 +1,34 @@
+name: Required TypeScript Quality Gate
+
+on:
+    pull_request:
+    merge_group:
+
+permissions:
+    contents: read
+    pull-requests: read
+
+concurrency:
+    group: required-quality-gate-${{ github.repository }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    governance:
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: ./.github/workflows/reusable-pr-governance.yml
+        with:
+            require-main-source-branches: develop,staging
+            allowed-develop-sources: feature/,fix/,bugfix/,hotfix/,chore/,refactor/,docs/,release/,test/,ci/,build/,perf/,deps/,dependabot/,renovate/,sync/
+            allowed-staging-sources: develop,release/,hotfix/,fix/,bugfix/,sync/
+            validate-pr-body: true
+
+    quality:
+        uses: ./.github/workflows/reusable-typescript-quality.yml
+        with:
+            node-version: "22"
+            bun-version: "1.1.26"
+            require-lint: true
+            require-typecheck: true
+            require-test: true
+            require-build: false
+            require-format-check: false

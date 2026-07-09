@@ -1,0 +1,291 @@
+name: Reusable TypeScript Quality
+
+on:
+    workflow_call:
+        inputs:
+            node-version:
+                description: Node.js version to use.
+                required: false
+                default: "22"
+                type: string
+            bun-version:
+                description: Bun version to use when bun is detected or selected.
+                required: false
+                default: "1.1.26"
+                type: string
+            working-directory:
+                description: Directory where the package.json lives.
+                required: false
+                default: .
+                type: string
+            package-manager:
+                description: auto, pnpm, npm, yarn, or bun.
+                required: false
+                default: auto
+                type: string
+            install-command:
+                description: Custom install command. If empty, it is inferred from the package manager.
+                required: false
+                default: ""
+                type: string
+            lint-command:
+                description: Custom lint command.
+                required: false
+                default: ""
+                type: string
+            typecheck-command:
+                description: Custom typecheck command.
+                required: false
+                default: ""
+                type: string
+            test-command:
+                description: Custom test command.
+                required: false
+                default: ""
+                type: string
+            build-command:
+                description: Custom build command.
+                required: false
+                default: ""
+                type: string
+            format-command:
+                description: Custom format check command.
+                required: false
+                default: ""
+                type: string
+            require-lint:
+                description: Fails when lint is not available.
+                required: false
+                default: true
+                type: boolean
+            require-typecheck:
+                description: Fails when typecheck is not available.
+                required: false
+                default: true
+                type: boolean
+            require-test:
+                description: Fails when test is not available.
+                required: false
+                default: true
+                type: boolean
+            require-build:
+                description: Fails when build is not available.
+                required: false
+                default: false
+                type: boolean
+            require-format-check:
+                description: Fails when no format-check command is available.
+                required: false
+                default: false
+                type: boolean
+
+permissions:
+    contents: read
+
+jobs:
+    quality:
+        name: TypeScript Quality
+        runs-on: ubuntu-latest
+        defaults:
+            run:
+                shell: bash
+                working-directory: ${{ inputs.working-directory }}
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Detect project setup
+              id: detect
+              env:
+                  INPUT_PACKAGE_MANAGER: ${{ inputs.package-manager }}
+                  INPUT_INSTALL_COMMAND: ${{ inputs.install-command }}
+                  INPUT_LINT_COMMAND: ${{ inputs.lint-command }}
+                  INPUT_TYPECHECK_COMMAND: ${{ inputs.typecheck-command }}
+                  INPUT_TEST_COMMAND: ${{ inputs.test-command }}
+                  INPUT_BUILD_COMMAND: ${{ inputs.build-command }}
+                  INPUT_FORMAT_COMMAND: ${{ inputs.format-command }}
+                  REQUIRE_LINT: ${{ inputs.require-lint }}
+                  REQUIRE_TYPECHECK: ${{ inputs.require-typecheck }}
+                  REQUIRE_TEST: ${{ inputs.require-test }}
+                  REQUIRE_BUILD: ${{ inputs.require-build }}
+                  REQUIRE_FORMAT_CHECK: ${{ inputs.require-format-check }}
+              run: |
+                  node <<'NODE'
+                  const fs = require("fs");
+                  const path = require("path");
+
+                  const cwd = process.cwd();
+                  const pkgPath = path.join(cwd, "package.json");
+
+                  const fail = (message) => {
+                    console.error(message);
+                    process.exit(1);
+                  };
+
+                  if (!fs.existsSync(pkgPath)) {
+                    fail(`package.json nao encontrado em ${pkgPath}.`);
+                  }
+
+                  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+                  const scripts = pkg.scripts || {};
+
+                  const fileExists = (file) => fs.existsSync(path.join(cwd, file));
+
+                  const inferPackageManager = () => {
+                    const explicit = process.env.INPUT_PACKAGE_MANAGER;
+                    if (explicit && explicit !== "auto") {
+                      return explicit;
+                    }
+
+                    const packageManagerField = typeof pkg.packageManager === "string" ? pkg.packageManager : "";
+                    if (packageManagerField.startsWith("bun@")) {
+                      return "bun";
+                    }
+                    if (packageManagerField.startsWith("pnpm@")) {
+                      return "pnpm";
+                    }
+                    if (packageManagerField.startsWith("yarn@")) {
+                      return "yarn";
+                    }
+                    if (packageManagerField.startsWith("npm@")) {
+                      return "npm";
+                    }
+
+                    if (fileExists("bun.lockb") || fileExists("bun.lock")) {
+                      return "bun";
+                    }
+                    if (fileExists("pnpm-lock.yaml")) {
+                      return "pnpm";
+                    }
+                    if (fileExists("yarn.lock")) {
+                      return "yarn";
+                    }
+                    if (fileExists("package-lock.json") || fileExists("npm-shrinkwrap.json")) {
+                      return "npm";
+                    }
+
+                    return "npm";
+                  };
+
+                  const resolveScript = (explicit, fallbacks, packageManager) => {
+                    if (explicit) {
+                      return explicit;
+                    }
+
+                    const scriptName = fallbacks.find((candidate) => Boolean(scripts[candidate]));
+                    if (!scriptName) {
+                      return "";
+                    }
+
+                    if (packageManager === "bun") {
+                      return `bun run ${scriptName}`;
+                    }
+
+                    return `npm run ${scriptName}`;
+                  };
+
+                  const packageManager = inferPackageManager();
+                  const installCommand = process.env.INPUT_INSTALL_COMMAND || (
+                    packageManager === "bun"
+                      ? "bun install --frozen-lockfile"
+                      : packageManager === "pnpm"
+                        ? "pnpm install --frozen-lockfile"
+                        : packageManager === "yarn"
+                          ? (fileExists(".yarnrc.yml") ? "yarn install --immutable" : "yarn install --frozen-lockfile")
+                          : "npm ci"
+                  );
+
+                  const commands = {
+                    lint: resolveScript(process.env.INPUT_LINT_COMMAND, ["lint"], packageManager),
+                    typecheck: resolveScript(process.env.INPUT_TYPECHECK_COMMAND, ["typecheck", "check-types", "types"], packageManager),
+                    test: resolveScript(process.env.INPUT_TEST_COMMAND, ["test"], packageManager),
+                    build: resolveScript(process.env.INPUT_BUILD_COMMAND, ["build"], packageManager),
+                    format: resolveScript(
+                      process.env.INPUT_FORMAT_COMMAND,
+                      ["format:check", "check-format", "prettier:check", "fmt:check"],
+                      packageManager
+                    )
+                  };
+
+                  const requirements = {
+                    lint: process.env.REQUIRE_LINT === "true",
+                    typecheck: process.env.REQUIRE_TYPECHECK === "true",
+                    test: process.env.REQUIRE_TEST === "true",
+                    build: process.env.REQUIRE_BUILD === "true",
+                    format: process.env.REQUIRE_FORMAT_CHECK === "true"
+                  };
+
+                  const missing = Object.entries(requirements)
+                    .filter(([name, required]) => required && !commands[name])
+                    .map(([name]) => name);
+
+                  if (missing.length > 0) {
+                    fail(
+                      `Scripts obrigatorios nao encontrados ou nao configurados: ${missing.join(", ")}. ` +
+                        "Defina os scripts no package.json ou sobrescreva os comandos no workflow chamador."
+                    );
+                  }
+
+                  const output = process.env.GITHUB_OUTPUT;
+                  const lines = [
+                    `package_manager=${packageManager}`,
+                    `install_command=${installCommand}`,
+                    `lint_command=${commands.lint}`,
+                    `typecheck_command=${commands.typecheck}`,
+                    `test_command=${commands.test}`,
+                    `build_command=${commands.build}`,
+                    `format_command=${commands.format}`
+                  ];
+                  fs.appendFileSync(output, `${lines.join("\n")}\n`);
+                  NODE
+
+            - name: Set up Node.js
+              if: ${{ steps.detect.outputs.package_manager != 'bun' }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ inputs.node-version }}
+                  cache: ${{ steps.detect.outputs.package_manager }}
+                  cache-dependency-path: |
+                      ${{ inputs.working-directory }}/pnpm-lock.yaml
+                      ${{ inputs.working-directory }}/package-lock.json
+                      ${{ inputs.working-directory }}/npm-shrinkwrap.json
+                      ${{ inputs.working-directory }}/yarn.lock
+
+            - name: Set up pnpm
+              if: ${{ steps.detect.outputs.package_manager == 'pnpm' }}
+              uses: pnpm/action-setup@v4
+              with:
+                  run_install: false
+
+            - name: Set up Bun
+              if: ${{ steps.detect.outputs.package_manager == 'bun' }}
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: ${{ inputs.bun-version }}
+
+            - name: Enable Corepack
+              if: ${{ steps.detect.outputs.package_manager == 'pnpm' || steps.detect.outputs.package_manager == 'yarn' }}
+              run: corepack enable
+
+            - name: Install dependencies
+              run: ${{ steps.detect.outputs.install_command }}
+
+            - name: Lint
+              if: ${{ steps.detect.outputs.lint_command != '' }}
+              run: ${{ steps.detect.outputs.lint_command }}
+
+            - name: Typecheck
+              if: ${{ steps.detect.outputs.typecheck_command != '' }}
+              run: ${{ steps.detect.outputs.typecheck_command }}
+
+            - name: Test
+              if: ${{ steps.detect.outputs.test_command != '' }}
+              run: ${{ steps.detect.outputs.test_command }}
+
+            - name: Build
+              if: ${{ steps.detect.outputs.build_command != '' }}
+              run: ${{ steps.detect.outputs.build_command }}
+
+            - name: Format check
+              if: ${{ steps.detect.outputs.format_command != '' }}
+              run: ${{ steps.detect.outputs.format_command }}
