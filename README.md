@@ -18,6 +18,10 @@ Arquivos comunitarios e automacoes globais da organizacao.
 3. O ruleset da `main` exige PR e usa o workflow de governanca para aceitar apenas `develop` ou `staging`.
 4. O body do PR precisa seguir o `PULL_REQUEST_TEMPLATE.md`.
 
+Observacao:
+
+Quando `.github/workflows/required-typescript-quality-gate.yml` for usado como workflow exigido por ruleset, ele deve referenciar os reusable workflows com `owner/repo/path@ref`, nao com caminho relativo.
+
 ## Exemplo de uso direto em um repositorio
 
 ```yaml
