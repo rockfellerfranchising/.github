@@ -239,18 +239,6 @@ jobs:
                   fs.appendFileSync(output, `${lines.join("\n")}\n`);
                   NODE
 
-            - name: Set up Node.js
-              if: ${{ steps.detect.outputs.package_manager != 'bun' }}
-              uses: actions/setup-node@v4
-              with:
-                  node-version: ${{ inputs.node-version }}
-                  cache: ${{ steps.detect.outputs.package_manager }}
-                  cache-dependency-path: |
-                      ${{ inputs.working-directory }}/pnpm-lock.yaml
-                      ${{ inputs.working-directory }}/package-lock.json
-                      ${{ inputs.working-directory }}/npm-shrinkwrap.json
-                      ${{ inputs.working-directory }}/yarn.lock
-
             - name: Set up pnpm
               if: ${{ steps.detect.outputs.package_manager == 'pnpm' }}
               uses: pnpm/action-setup@v4
@@ -262,6 +250,18 @@ jobs:
               uses: oven-sh/setup-bun@v2
               with:
                   bun-version: ${{ inputs.bun-version }}
+
+            - name: Set up Node.js
+              if: ${{ steps.detect.outputs.package_manager != 'bun' }}
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ inputs.node-version }}
+                  cache: ${{ steps.detect.outputs.package_manager }}
+                  cache-dependency-path: |
+                      ${{ inputs.working-directory }}/pnpm-lock.yaml
+                      ${{ inputs.working-directory }}/package-lock.json
+                      ${{ inputs.working-directory }}/npm-shrinkwrap.json
+                      ${{ inputs.working-directory }}/yarn.lock
 
             - name: Enable Corepack
               if: ${{ steps.detect.outputs.package_manager == 'pnpm' || steps.detect.outputs.package_manager == 'yarn' }}
