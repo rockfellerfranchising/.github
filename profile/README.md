@@ -1,6 +1,4 @@
 <div align="center">
-  <img src="assets/rockfeller-banner.png" alt="Rockfeller Language Center — Excelência em Conversação" width="100%" />
-
   # Engenharia Rockfeller
 
   Este é o ponto de entrada para quem desenvolve nos projetos da organização.
