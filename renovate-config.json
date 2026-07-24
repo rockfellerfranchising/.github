@@ -1,0 +1,41 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Shared Renovate policy for Rockfeller Franchising repositories.",
+  "extends": ["config:recommended"],
+  "baseBranchPatterns": ["$default"],
+  "timezone": "America/Sao_Paulo",
+  "schedule": ["* 20-23,0-6 * * 1-5", "* * * * 0,6"],
+  "updateNotScheduled": false,
+  "prConcurrentLimit": 4,
+  "prHourlyLimit": 1,
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Renovate Dependency Dashboard",
+  "automerge": false,
+  "ignorePaths": [".npm-home/**"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 1-5 * * 6"]
+  },
+  "packageRules": [
+    {
+      "description": "Group non-major development dependency updates.",
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "non-major development dependencies",
+      "groupSlug": "non-major-development-dependencies"
+    },
+    {
+      "description": "Group GitHub Actions updates.",
+      "matchManagers": ["github-actions"],
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions"
+    },
+    {
+      "description": "Group non-major Docker image updates.",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "groupName": "non-major Docker images",
+      "groupSlug": "non-major-docker-images"
+    }
+  ]
+}
