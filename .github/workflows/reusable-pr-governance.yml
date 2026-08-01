@@ -40,7 +40,7 @@ jobs:
         steps:
             - name: Checkout org community files
               if: ${{ inputs.validate-pr-body }}
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
               with:
                   repository: ${{ github.repository_owner }}/${{ inputs.organization-community-repo }}
                   path: org-community

@@ -92,7 +92,7 @@ jobs:
                 working-directory: ${{ inputs.working-directory }}
         steps:
             - name: Checkout repository
-              uses: actions/checkout@v4
+              uses: actions/checkout@v7
 
             - name: Detect project setup
               id: detect
@@ -241,7 +241,7 @@ jobs:
 
             - name: Set up pnpm
               if: ${{ steps.detect.outputs.package_manager == 'pnpm' }}
-              uses: pnpm/action-setup@v4
+              uses: pnpm/action-setup@v6
               with:
                   run_install: false
 
@@ -253,7 +253,7 @@ jobs:
 
             - name: Set up Node.js
               if: ${{ steps.detect.outputs.package_manager != 'bun' }}
-              uses: actions/setup-node@v4
+              uses: actions/setup-node@v7
               with:
                   node-version: ${{ inputs.node-version }}
                   cache: ${{ steps.detect.outputs.package_manager }}
