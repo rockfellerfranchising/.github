@@ -15,7 +15,7 @@ Arquivos comunitarios e automacoes globais da organizacao.
 
 1. Repositorios TypeScript usam o template `TypeScript Quality Gate` ou chamam os reusable workflows diretamente.
 2. `main`, `develop` e `staging` ficam protegidas por rulesets da organizacao.
-3. O ruleset da `main` exige PR e usa o workflow de governanca para aceitar apenas `develop` ou `staging`.
+3. O ruleset da `main` exige PR e usa o workflow de governanca para aceitar `develop`, `staging` ou branches `hotfix/*`.
 4. O body do PR precisa seguir o `PULL_REQUEST_TEMPLATE.md`.
 
 Observacao:
