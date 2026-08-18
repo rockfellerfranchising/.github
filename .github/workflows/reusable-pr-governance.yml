@@ -11,7 +11,7 @@ on:
             require-main-source-branches:
                 description: Comma-separated branches allowed to open PRs into main.
                 required: false
-                default: develop,staging
+                default: develop,staging,hotfix/
                 type: string
             allowed-develop-sources:
                 description: Comma-separated exact branches or prefixes allowed into develop.
@@ -101,7 +101,7 @@ jobs:
                     fail("Este workflow deve rodar em eventos de pull_request.");
                   }
 
-                  const mainSources = parsePatterns(process.env.REQUIRE_MAIN_SOURCE_BRANCHES || "develop,staging");
+                  const mainSources = parsePatterns(process.env.REQUIRE_MAIN_SOURCE_BRANCHES || "develop,staging,hotfix/");
                   const developSources = parsePatterns(process.env.ALLOWED_DEVELOP_SOURCES || "");
                   const stagingSources = parsePatterns(process.env.ALLOWED_STAGING_SOURCES || "");
 

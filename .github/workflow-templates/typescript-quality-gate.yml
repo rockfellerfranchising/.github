@@ -41,7 +41,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: rockfellerfranchising/.github/.github/workflows/reusable-pr-governance.yml@main
         with:
-            require-main-source-branches: develop,staging
+            require-main-source-branches: develop,staging,hotfix/
             allowed-develop-sources: feature/,fix/,bugfix/,hotfix/,chore/,refactor/,docs/,release/,test/,ci/,build/,perf/,deps/,dependabot/,renovate/,sync/
             allowed-staging-sources: develop,release/,hotfix/,fix/,bugfix/,sync/
             validate-pr-body: true
