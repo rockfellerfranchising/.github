@@ -11,7 +11,7 @@ on:
             bun-version:
                 description: Bun version to use when bun is detected or selected.
                 required: false
-                default: "1.1.26"
+                default: "1.3.8"
                 type: string
             working-directory:
                 description: Directory where the package.json lives.
@@ -180,6 +180,12 @@ jobs:
                     if (packageManager === "bun") {
                       return `bun run ${scriptName}`;
                     }
+                    if (packageManager === "pnpm") {
+                      return `pnpm run ${scriptName}`;
+                    }
+                    if (packageManager === "yarn") {
+                      return `yarn run ${scriptName}`;
+                    }
 
                     return `npm run ${scriptName}`;
                   };
@@ -283,9 +289,9 @@ jobs:
               run: ${{ steps.detect.outputs.test_command }}
 
             - name: Build
-              if: ${{ steps.detect.outputs.build_command != '' }}
+              if: ${{ inputs.require-build && steps.detect.outputs.build_command != '' }}
               run: ${{ steps.detect.outputs.build_command }}
 
             - name: Format check
-              if: ${{ steps.detect.outputs.format_command != '' }}
+              if: ${{ inputs.require-format-check && steps.detect.outputs.format_command != '' }}
               run: ${{ steps.detect.outputs.format_command }}
