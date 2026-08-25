@@ -21,7 +21,7 @@ on:
             allowed-staging-sources:
                 description: Comma-separated exact branches or prefixes allowed into staging.
                 required: false
-                default: develop,release/,hotfix/,fix/,bugfix/,sync/
+                default: develop,release/,hotfix/,fix/,bugfix/,sync/,dependabot/
                 type: string
             validate-pr-body:
                 description: Validates that the PR body follows the organization template.

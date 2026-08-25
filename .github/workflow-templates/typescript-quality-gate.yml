@@ -43,7 +43,7 @@ jobs:
         with:
             require-main-source-branches: develop,staging,hotfix/
             allowed-develop-sources: feature/,fix/,bugfix/,hotfix/,chore/,refactor/,docs/,release/,test/,ci/,build/,perf/,deps/,dependabot/,renovate/,sync/
-            allowed-staging-sources: develop,release/,hotfix/,fix/,bugfix/,sync/
+            allowed-staging-sources: develop,release/,hotfix/,fix/,bugfix/,sync/,dependabot/
             validate-pr-body: true
 
     quality:
