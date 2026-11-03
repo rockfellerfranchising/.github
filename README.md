@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/banner.png" alt="Rockfeller" width="100%">
-</p>
-
 # Rockfellerfranchising `.github`
 
 Arquivos comunitários e automações globais da organização.
