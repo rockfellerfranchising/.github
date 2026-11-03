@@ -1,28 +1,58 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Rockfeller" width="100%">
+</p>
+
 # Rockfellerfranchising `.github`
 
-Arquivos comunitarios e automacoes globais da organizacao.
+Arquivos comunitários e automações globais da organização.
 
 ## O que existe aqui
 
-- `PULL_REQUEST_TEMPLATE.md`: template padrao de PR da organizacao
-- `.github/pr-template-spec.json`: contrato validado pelo workflow de governanca
-- `.github/workflows/reusable-pr-governance.yml`: valida origem do PR e estrutura do body
-- `.github/workflows/reusable-typescript-quality.yml`: roda lint, typecheck, test, build e format-check quando configurados, com suporte a `bun`, `pnpm`, `npm` e `yarn`
-- `.github/workflows/required-typescript-quality-gate.yml`: workflow pronto para ser exigido por ruleset da organizacao
-- `.github/workflow-templates/typescript-quality-gate.yml`: workflow template para repositorios TypeScript
+- `PULL_REQUEST_TEMPLATE.md` e `.github/pr-template-spec.json`: template de PR e o contrato usado para validá-lo.
+- `reusable-pr-governance.yml`: valida a branch de origem e o body do PR.
+- `reusable-typescript-quality.yml`: roda lint, typecheck, test, build e format-check (quando configurados) com `bun`, `pnpm`, `npm` ou `yarn`.
+- `reusable-production-release-deploy.yml` e `reusable-staging-release-deploy.yml`: validam a release publicada e devolvem a tag e o SHA verificados.
+- `required-typescript-quality-gate.yml`: workflow para ser exigido por ruleset da organização.
+- `workflow-templates/typescript-quality-gate.yml`: template para repositórios TypeScript.
 
-## Estrategia recomendada
+Os workflows ficam em `.github/workflows/`.
 
-1. Repositorios TypeScript usam o template `TypeScript Quality Gate` ou chamam os reusable workflows diretamente.
-2. `main`, `develop` e `staging` ficam protegidas por rulesets da organizacao.
-3. O ruleset da `main` exige PR e usa o workflow de governanca para aceitar `develop`, `staging` ou branches `hotfix/*`.
-4. O body do PR precisa seguir o `PULL_REQUEST_TEMPLATE.md`.
+## Como usar
 
-Observacao:
+1. Repositórios TypeScript usam o template `TypeScript Quality Gate` ou chamam os reusable workflows direto.
+2. `main`, `develop` e `staging` ficam protegidas por rulesets. A `main` exige PR vindo de `develop`, `staging` ou `hotfix/*`.
+3. O body do PR segue o `PULL_REQUEST_TEMPLATE.md`.
 
-Quando `.github/workflows/required-typescript-quality-gate.yml` for usado como workflow exigido por ruleset, ele deve referenciar os reusable workflows com `owner/repo/path@ref`, nao com caminho relativo.
+Se `required-typescript-quality-gate.yml` for exigido por ruleset, ele deve referenciar os reusable workflows com `owner/repo/path@ref`. Caminho relativo não funciona nesse caso.
 
-## Exemplo de uso direto em um repositorio
+## Deploy só por release
+
+Só release publicada faz deploy: pre-release de `develop` vai para `staging` e release estável de `main` vai para `production`. Cada repositório chama o gate do ambiente e roda o próprio deploy com os secrets do GitHub Environment. Desative o auto-deploy do provedor para que um push não passe por fora da regra.
+
+```yaml
+jobs:
+  production-gate:
+    if: ${{ !github.event.release.prerelease }}
+    uses: rockfellerfranchising/.github/.github/workflows/reusable-production-release-deploy.yml@main
+
+  deploy-production:
+    needs: production-gate
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.production-gate.outputs.release-tag }}
+      - run: ./scripts/deploy-production.sh
+```
+
+Para staging, use `reusable-staging-release-deploy.yml` em uma pre-release.
+
+## Exemplo em um repositório
 
 ```yaml
 name: Quality Gate
@@ -45,7 +75,7 @@ jobs:
   quality:
     uses: rockfellerfranchising/.github/.github/workflows/reusable-typescript-quality.yml@main
     with:
-        node-version: "22"
-        bun-version: "1.1.26"
-        require-build: true
+      node-version: "22"
+      bun-version: "1.3.8"
+      require-build: true
 ```

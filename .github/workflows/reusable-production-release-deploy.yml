@@ -1,0 +1,51 @@
+name: Reusable Production Release Deploy
+
+on:
+  workflow_call:
+    outputs:
+      release-tag:
+        description: Verified production release tag.
+        value: ${{ jobs.validate-release.outputs.release-tag }}
+      release-sha:
+        description: Commit resolved from the verified production release tag.
+        value: ${{ jobs.validate-release.outputs.release-sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  validate-release:
+    name: Validate production release
+    runs-on: ubuntu-latest
+    outputs:
+      release-tag: ${{ steps.release.outputs.tag }}
+      release-sha: ${{ steps.release.outputs.sha }}
+    steps:
+      - name: Require a published stable release from main
+        env:
+          RELEASE_PRERELEASE: ${{ github.event.release.prerelease }}
+          RELEASE_TARGET: ${{ github.event.release.target_commitish }}
+        run: |
+          set -euo pipefail
+
+          test "${{ github.event_name }}" = "release"
+          test "${{ github.event.action }}" = "published"
+          test "$RELEASE_PRERELEASE" = "false"
+          test "$RELEASE_TARGET" = "main"
+
+      - name: Check out the release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          fetch-depth: 0
+
+      - name: Verify that the release commit belongs to main
+        id: release
+        run: |
+          set -euo pipefail
+
+          git fetch origin main --depth=1
+          release_commit="$(git rev-list -n 1 "${{ github.event.release.tag_name }}")"
+          git merge-base --is-ancestor "$release_commit" origin/main
+          echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          echo "sha=$release_commit" >> "$GITHUB_OUTPUT"
